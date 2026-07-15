@@ -1,16 +1,18 @@
 export const Colors = {
-  primary: '#9b2b91', // Purple
-  secondary: '#2ecc71', // Green
-  background: '#F9FAFB', // Off-white
-  surface: '#FFFFFF', // White
-  text: '#111827', // Dark Gray
-  textMuted: '#6B7280', // Gray
-  border: '#F3F4F6', // Light Gray
-  error: '#EF4444', // Red
-  success: '#10B981', // Green
-  warning: '#F59E0B', // Yellow/Orange
-  info: '#3B82F6', // Blue
+  primary: '#16A34A',
+  primaryLight: '#DCFCE7',
+  secondary: '#0D9488',
+  secondaryLight: '#CCFBF1',
+  background: '#F6F7FB',
+  surface: '#FFFFFF',
+  text: '#111827',
+  textMuted: '#6B7280',
+  border: '#E5E7EB',
+  error: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
+  info: '#3B82F6',
   black: '#000000',
   white: '#FFFFFF',
-  transparent: 'transparent'
+  transparent: 'transparent',
 };

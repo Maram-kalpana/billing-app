@@ -1,68 +1,200 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
-import { transactionsData } from '../data/posData';
 import { Ionicons } from '@expo/vector-icons';
+import { useReports } from '../context/ReportContext';
 
 export const ReportsScreen = () => {
-  const [activeTab, setActiveTab] = useState('Transactional');
-  const tabs = ['Transactional', 'Sales', 'Inventory', 'Customers'];
+  const { reports } = useReports();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('All');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const dateFilterOptions = ['All', 'Today', 'Last 7 days', 'Last 30 days'];
+
+  const filteredReports = useMemo(() => {
+    let filtered = [...reports];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (r) =>
+          r.billNumber.toLowerCase().includes(q) ||
+          r.paymentMethod.toLowerCase().includes(q)
+      );
+    }
+
+    // Date filter
+    if (dateFilter !== 'All') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      filtered = filtered.filter((r) => {
+        // Parse Indian date format (DD/MM/YYYY)
+        const parts = r.date.split('/');
+        let reportDate;
+        if (parts.length === 3) {
+          reportDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        } else {
+          reportDate = new Date(r.date);
+        }
+
+        if (dateFilter === 'Today') {
+          return reportDate >= today;
+        } else if (dateFilter === 'Last 7 days') {
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return reportDate >= weekAgo;
+        } else if (dateFilter === 'Last 30 days') {
+          const monthAgo = new Date(today);
+          monthAgo.setDate(monthAgo.getDate() - 30);
+          return reportDate >= monthAgo;
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [reports, searchQuery, dateFilter]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Reports</Text>
-        <TouchableOpacity style={styles.gridBtn}>
-          <Ionicons name="grid-outline" size={24} color={Colors.text} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.tabsContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {tabs.map((tab) => (
-            <TouchableOpacity 
-              key={tab} 
-              style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.filterRow}>
-        <View style={styles.dateDropdown}>
-          <Text style={styles.dateText}>Today</Text>
-          <Ionicons name="chevron-down" size={16} color={Colors.textMuted} />
+        <View style={styles.reportCount}>
+          <Text style={styles.reportCountText}>{reports.length} transactions</Text>
         </View>
+      </View>
+
+      {/* Filters */}
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={styles.dateDropdown}
+          onPress={() => setShowDatePicker(!showDatePicker)}
+        >
+          <Text style={styles.dateText}>{dateFilter}</Text>
+          <Ionicons
+            name={showDatePicker ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={Colors.textMuted}
+          />
+        </TouchableOpacity>
         <View style={styles.searchInput}>
-          <TextInput 
-            placeholder="Search..." 
+          <Ionicons name="search" size={18} color={Colors.textMuted} />
+          <TextInput
+            placeholder="Search bill no..."
             placeholderTextColor={Colors.textMuted}
             style={styles.input}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
-        {transactionsData.map((txn) => (
-          <View key={txn.id} style={styles.txnCard}>
-            <View style={styles.txnRow}>
-              <Text style={styles.txnId}>{txn.id}</Text>
-              <Text style={[styles.txnAmount, { color: txn.type === 'Sale' ? Colors.success : Colors.error }]}>
-                ₹{txn.amount}
+      {showDatePicker && (
+        <View style={styles.datePickerDropdown}>
+          {dateFilterOptions.map((option) => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.dateOption,
+                dateFilter === option && styles.dateOptionActive,
+              ]}
+              onPress={() => {
+                setDateFilter(option);
+                setShowDatePicker(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.dateOptionText,
+                  dateFilter === option && styles.dateOptionTextActive,
+                ]}
+              >
+                {option}
               </Text>
-            </View>
-            <View style={styles.txnRow}>
-              <Text style={styles.txnDetails}>{txn.type} • {txn.date}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: txn.status === 'Completed' ? Colors.success + '20' : Colors.border }]}>
-                <Text style={[styles.statusText, { color: txn.status === 'Completed' ? Colors.success : Colors.textMuted }]}>{txn.status}</Text>
+              {dateFilter === option && (
+                <Ionicons name="checkmark" size={16} color={Colors.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
+        {filteredReports.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="document-text-outline" size={64} color={Colors.border} />
+            <Text style={styles.emptyTitle}>
+              {reports.length === 0 ? 'No transactions yet' : 'No matching results'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {reports.length === 0
+                ? 'Complete a payment to see reports here'
+                : 'Try adjusting your search or filters'}
+            </Text>
+          </View>
+        ) : (
+          filteredReports.map((report) => (
+            <View key={report.id} style={styles.reportCard}>
+              <View style={styles.reportHeader}>
+                <View style={styles.billBadge}>
+                  <Text style={styles.billBadgeText}>#{report.billNumber}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: Colors.primary + '15' },
+                  ]}
+                >
+                  <Text style={[styles.statusText, { color: Colors.primary }]}>
+                    {report.status}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.reportBody}>
+                <View style={styles.reportRow}>
+                  <View style={styles.reportField}>
+                    <Ionicons name="calendar-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.reportFieldText}>{report.date}</Text>
+                  </View>
+                  <View style={styles.reportField}>
+                    <Ionicons name="time-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.reportFieldText}>{report.time}</Text>
+                  </View>
+                </View>
+                <View style={styles.reportRow}>
+                  <View style={styles.reportField}>
+                    <Ionicons name="card-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.reportFieldText}>{report.paymentMethod}</Text>
+                  </View>
+                  <View style={styles.reportField}>
+                    <Ionicons name="cube-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.reportFieldText}>
+                      {report.items?.length || 0} items • Qty: {report.totalQty || 0}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.reportFooter}>
+                <Text style={styles.amountLabel}>Amount</Text>
+                <Text style={styles.amountValue}>₹{(report.amount || 0).toFixed(2)}</Text>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -71,115 +203,195 @@ export const ReportsScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    height: 64,
+    backgroundColor: Colors.surface,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   headerTitle: {
     fontSize: Fonts.sizes.xl,
     fontWeight: 'bold',
     color: Colors.text,
   },
-  gridBtn: {
-    padding: 4,
+  reportCount: {
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
   },
-  tabsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  tabBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  tabBtnActive: {
-    backgroundColor: Colors.primary,
-  },
-  tabText: {
-    color: Colors.textMuted,
-    fontSize: Fonts.sizes.sm,
-    fontWeight: '500',
-  },
-  tabTextActive: {
-    color: Colors.white,
+  reportCountText: {
+    color: Colors.primary,
+    fontSize: Fonts.sizes.xs,
+    fontWeight: '600',
   },
   filterRow: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
   },
   dateDropdown: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    marginRight: 12,
-    width: 100,
-    justifyContent: 'space-between',
+    backgroundColor: Colors.surface,
+    gap: 6,
   },
   dateText: {
     color: Colors.text,
     fontSize: Fonts.sizes.sm,
+    fontWeight: '500',
   },
   searchInput: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    gap: 8,
   },
   input: {
+    flex: 1,
     color: Colors.text,
     fontSize: Fonts.sizes.sm,
+    paddingVertical: 10,
+  },
+  datePickerDropdown: {
+    marginHorizontal: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  dateOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  dateOptionActive: {
+    backgroundColor: Colors.primaryLight,
+  },
+  dateOptionText: {
+    fontSize: Fonts.sizes.sm,
+    color: Colors.text,
+  },
+  dateOptionTextActive: {
+    fontWeight: '700',
+    color: Colors.primary,
   },
   listContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 20,
   },
-  txnCard: {
+  reportCard: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  txnRow: {
+  reportHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  txnId: {
-    fontSize: Fonts.sizes.md,
-    fontWeight: 'bold',
-    color: Colors.text,
+  billBadge: {
+    backgroundColor: Colors.text,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  txnAmount: {
-    fontSize: Fonts.sizes.md,
-    fontWeight: 'bold',
-  },
-  txnDetails: {
+  billBadgeText: {
+    color: Colors.white,
     fontSize: Fonts.sizes.sm,
-    color: Colors.textMuted,
+    fontWeight: 'bold',
   },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   statusText: {
     fontSize: Fonts.sizes.xs,
     fontWeight: 'bold',
-  }
+  },
+  reportBody: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  reportRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  reportField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  reportFieldText: {
+    fontSize: Fonts.sizes.sm,
+    color: Colors.textMuted,
+  },
+  reportFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 12,
+  },
+  amountLabel: {
+    fontSize: Fonts.sizes.sm,
+    color: Colors.textMuted,
+  },
+  amountValue: {
+    fontSize: Fonts.sizes.xl,
+    fontWeight: 'bold',
+    color: Colors.primary,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: Fonts.sizes.lg,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: Fonts.sizes.sm,
+    color: Colors.textMuted,
+    textAlign: 'center',
+  },
 });

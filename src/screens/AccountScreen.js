@@ -1,47 +1,161 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
 import { Ionicons } from '@expo/vector-icons';
+import { useAccount } from '../context/AccountContext';
 
 export const AccountScreen = ({ navigation }) => {
+  const { account, updateAccountSettings } = useAccount();
+
+  const [merchantName, setMerchantName] = useState(account.merchantName || '');
+  const [upiId, setUpiId] = useState(account.upiId || '');
+  const [gstPercent, setGstPercent] = useState(String(account.gstPercent || ''));
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    setMerchantName(account.merchantName || '');
+    setUpiId(account.upiId || '');
+    setGstPercent(String(account.gstPercent || ''));
+  }, [account]);
+
+  useEffect(() => {
+    const changed =
+      merchantName !== (account.merchantName || '') ||
+      upiId !== (account.upiId || '') ||
+      gstPercent !== String(account.gstPercent || '');
+    setHasChanges(changed);
+  }, [merchantName, upiId, gstPercent, account]);
+
+  const handleSave = async () => {
+    const gst = parseFloat(gstPercent) || 0;
+    if (gst < 0 || gst > 100) {
+      Alert.alert('Invalid GST', 'GST percentage must be between 0 and 100');
+      return;
+    }
+
+    await updateAccountSettings({
+      merchantName: merchantName.trim(),
+      upiId: upiId.trim(),
+      gstPercent: gst,
+    });
+
+    setHasChanges(false);
+    Alert.alert('Saved', 'Account settings saved successfully');
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Account</Text>
       </View>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        
+        {/* Profile */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Ionicons name="person" size={40} color={Colors.white} />
           </View>
-          <Text style={styles.name}>Admin Store</Text>
+          <Text style={styles.name}>{account.merchantName || 'Admin Store'}</Text>
           <Text style={styles.email}>admin@store.com</Text>
         </View>
 
+        {/* Payment Methods Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Methods</Text>
+
+          <View style={styles.inputCard}>
+            <View style={styles.inputRow}>
+              <View style={styles.inputIconBox}>
+                <Ionicons name="storefront-outline" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.inputContent}>
+                <Text style={styles.inputLabel}>Merchant Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={merchantName}
+                  onChangeText={setMerchantName}
+                  placeholder="Your shop name"
+                  placeholderTextColor={Colors.textMuted}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.inputCard}>
+            <View style={styles.inputRow}>
+              <View style={styles.inputIconBox}>
+                <Ionicons name="phone-portrait-outline" size={20} color="#7C3AED" />
+              </View>
+              <View style={styles.inputContent}>
+                <Text style={styles.inputLabel}>UPI ID</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={upiId}
+                  onChangeText={setUpiId}
+                  placeholder="merchant@upi"
+                  placeholderTextColor={Colors.textMuted}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.inputCard}>
+            <View style={styles.inputRow}>
+              <View style={styles.inputIconBox}>
+                <Ionicons name="calculator-outline" size={20} color={Colors.warning} />
+              </View>
+              <View style={styles.inputContent}>
+                <Text style={styles.inputLabel}>GST Percentage (%)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={gstPercent}
+                  onChangeText={setGstPercent}
+                  placeholder="0"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveBtn, !hasChanges && styles.saveBtnDisabled]}
+            onPress={handleSave}
+            disabled={!hasChanges}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="checkmark" size={20} color={Colors.white} />
+            <Text style={styles.saveBtnText}>Save Settings</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Settings')}
+          >
             <View style={styles.menuIconContainer}>
               <Ionicons name="settings-outline" size={22} color={Colors.text} />
             </View>
             <Text style={styles.menuText}>General Settings</Text>
             <Ionicons name="chevron-forward" size={20} color={Colors.border} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIconContainer}>
-              <Ionicons name="card-outline" size={22} color={Colors.text} />
-            </View>
-            <Text style={styles.menuText}>Payment Methods</Text>
-            <Ionicons name="chevron-forward" size={20} color={Colors.border} />
-          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -54,7 +168,14 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    height: 64,
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   headerTitle: {
     fontSize: Fonts.sizes.xl,
@@ -69,7 +190,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
     backgroundColor: Colors.surface,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   avatar: {
     width: 80,
@@ -91,14 +212,81 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
     paddingHorizontal: 20,
   },
   sectionTitle: {
     fontSize: Fonts.sizes.md,
     fontWeight: 'bold',
     color: Colors.textMuted,
-    marginBottom: 12,
+    marginBottom: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  inputCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  inputContent: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: Fonts.sizes.xs,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  textInput: {
+    fontSize: Fonts.sizes.md,
+    color: Colors.text,
+    fontWeight: '500',
+    paddingVertical: 2,
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 25,
+    marginTop: 10,
+    gap: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveBtnDisabled: {
+    backgroundColor: Colors.textMuted,
+    opacity: 0.6,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  saveBtnText: {
+    color: Colors.white,
+    fontWeight: 'bold',
+    fontSize: Fonts.sizes.md,
   },
   menuItem: {
     flexDirection: 'row',
@@ -107,17 +295,20 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   menuIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
   },
   menuText: {
     flex: 1,
@@ -125,17 +316,4 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '500',
   },
-  logoutButton: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    backgroundColor: Colors.error + '15',
-    padding: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: Colors.error,
-    fontWeight: 'bold',
-    fontSize: Fonts.sizes.md,
-  }
 });

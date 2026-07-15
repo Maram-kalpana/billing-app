@@ -1,18 +1,19 @@
 export const categories = [
-  { id: '1', name: 'Meat', icon: '🥩' },
-  { id: '2', name: 'Rice', icon: '🍚' },
-  { id: '3', name: 'Grits', icon: '🌾' },
-  { id: '4', name: 'Salad', icon: '🥗' },
-  { id: '5', name: 'Other', icon: '📦' },
+  { id: '1', name: 'Fruits', icon: 'food-apple' },
+  { id: '2', name: 'Vegetables', icon: 'carrot' },
+  { id: '3', name: 'Meat', icon: 'food-steak' },
+  { id: '4', name: 'Rice', icon: 'rice' },
+  { id: '5', name: 'Dairy', icon: 'cup' },
+  { id: '6', name: 'Other', icon: 'package-variant' },
 ];
 
 export const productsData = [
-  { id: '1', name: 'Egg Chicken Red', price: 1.99, image: '🥚', category: 'Other', stock: 100 },
-  { id: '2', name: 'Egg Chicken White', price: 1.50, image: '🥚', category: 'Other', stock: 120 },
-  { id: '3', name: 'Banana', price: 50.00, image: '🍌', category: 'Other', stock: 100 },
-  { id: '4', name: 'Apple', price: 120.00, image: '🍎', category: 'Other', stock: 50 },
-  { id: '5', name: 'Potato', price: 30.00, image: '🥔', category: 'Other', stock: 200 },
-  { id: '6', name: 'Tomato', price: 40.00, image: '🍅', category: 'Other', stock: 150 },
+  { id: '1', name: 'Egg Tray', price: 1.99, icon: 'egg', category: 'Eggs', stock: 100, image_url: null },
+  { id: '2', name: 'Milk Packet', price: 1.5, icon: 'cup', category: 'Dairy', stock: 120, image_url: null },
+  { id: '3', name: 'Banana', price: 50.0, icon: 'food-apple', category: 'Fruits', stock: 100, image_url: null },
+  { id: '4', name: 'Apple', price: 120.0, icon: 'food-apple', category: 'Fruits', stock: 50, image_url: null },
+  { id: '5', name: 'Potato', price: 30.0, icon: 'carrot', category: 'Vegetables', stock: 200, image_url: null },
+  { id: '6', name: 'Tomato', price: 40.0, icon: 'carrot', category: 'Vegetables', stock: 150, image_url: null },
 ];
 
 export const cartItemsData = [

@@ -7,8 +7,8 @@ export const Fonts = {
     sm: 14,
     md: 16,
     lg: 18,
-    xl: 20,
+    xl: 22,
     xxl: 24,
     xxxl: 30,
-  }
+  },
 };

@@ -31,30 +31,48 @@ export const BottomNavigator = () => {
               iconName = focused ? 'receipt' : 'receipt-outline';
               break;
             case 'Reports':
-              iconName = focused ? 'heart' : 'heart-outline';
+              iconName = focused ? 'bar-chart' : 'bar-chart-outline';
               break;
             case 'Account':
               iconName = focused ? 'person' : 'person-outline';
               break;
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return (
+            <View style={[
+              {
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: focused ? Colors.primary : Colors.surface,
+              }
+            ]}>
+              <Ionicons name={iconName} size={size - 4} color={focused ? Colors.white : Colors.textMuted} />
+            </View>
+          );
         },
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: {
           backgroundColor: Colors.surface,
-          borderTopWidth: 1,
-          borderTopColor: Colors.border,
-          elevation: 0,
-          shadowOpacity: 0,
-          height: 65,
-          paddingBottom: 10,
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: Colors.black,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          height: 68,
+          paddingBottom: 8,
           paddingTop: 8,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
         },
         tabBarLabelStyle: {
           fontSize: Fonts.sizes.xs,
-          fontWeight: '500',
+          fontWeight: '600',
+          marginTop: -2,
         }
       })}
     >
