@@ -17,7 +17,7 @@ export const SettingsScreen = ({ navigation }) => {
         rightIcon="close" 
         onRightPress={() => navigation.goBack()} 
       />
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
@@ -90,6 +90,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   section: {
     marginTop: 24,

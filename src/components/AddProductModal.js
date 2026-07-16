@@ -17,7 +17,7 @@ import { Fonts } from '../constants/Fonts';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProducts } from '../context/ProductContext';
 import { getCategoryIconName } from '../constants/ProductAssets';
-import { uploadProductImage } from '../services/ImageUploadService';
+import { assignProductImage, uploadProductImage } from '../services/ImageUploadService';
 import { AddCategoryModal } from './AddCategoryModal';
 
 export const AddProductModal = ({ visible, onClose, productToEdit }) => {
@@ -73,6 +73,7 @@ export const AddProductModal = ({ visible, onClose, productToEdit }) => {
     if (!validate()) return;
 
     let finalImageUrl = imageUrl;
+
     if (localImageUri) {
       try {
         setUploading(true);
@@ -82,6 +83,19 @@ export const AddProductModal = ({ visible, onClose, productToEdit }) => {
         setErrors((prev) => ({
           ...prev,
           image: 'Image upload failed. Please try again.',
+        }));
+        return;
+      } finally {
+        setUploading(false);
+      }
+    } else if (!finalImageUrl) {
+      try {
+        setUploading(true);
+        finalImageUrl = await assignProductImage(name.trim(), null);
+      } catch (error) {
+        setErrors((prev) => ({
+          ...prev,
+          image: 'Image lookup failed. Please try again.',
         }));
         return;
       } finally {

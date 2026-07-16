@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
-import { MaterialIcons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProducts } from '../context/ProductContext';
 import { Header } from '../components/Header';
@@ -24,6 +24,27 @@ export const ProductsScreen = ({ navigation }) => {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+
+  const displayedProducts = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    let nextProducts = [...products];
+
+    if (normalized) {
+      nextProducts = nextProducts.filter((product) => {
+        const haystack = `${product.name} ${product.category}`.toLowerCase();
+        return haystack.includes(normalized);
+      });
+    }
+
+    nextProducts.sort((a, b) => {
+      if (sortBy === 'price') return a.price - b.price;
+      return a.name.localeCompare(b.name);
+    });
+
+    return nextProducts;
+  }, [products, searchQuery, sortBy]);
 
   const handleDelete = (productId, productName) => {
     Alert.alert(
@@ -53,6 +74,34 @@ export const ProductsScreen = ({ navigation }) => {
       />
 
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.toolbarCard}>
+          <View style={styles.searchBox}>
+            <MaterialCommunityIcons name="magnify" size={18} color={Colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search products"
+              placeholderTextColor={Colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          <View style={styles.toolbarActions}>
+            <TouchableOpacity
+              style={[styles.toolbarBtn, sortBy === 'name' && styles.toolbarBtnActive]}
+              onPress={() => setSortBy('name')}
+            >
+              <MaterialCommunityIcons name="sort-alphabetical-ascending" size={16} color={sortBy === 'name' ? Colors.white : Colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toolbarBtn, sortBy === 'price' && styles.toolbarBtnActive]}
+              onPress={() => setSortBy('price')}
+            >
+              <MaterialCommunityIcons name="cash-multiple" size={16} color={sortBy === 'price' ? Colors.white : Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.addBtn, styles.primaryBtn]}
@@ -60,31 +109,29 @@ export const ProductsScreen = ({ navigation }) => {
               setEditingProduct(null);
               setAddModalVisible(true);
             }}
-            activeOpacity={0.7}
+            activeOpacity={0.9}
           >
-            <MaterialIcons name="add" size={20} color={Colors.white} style={{ marginRight: 8 }} />
-            <Text style={styles.addBtnText}>Add New Product</Text>
+            <MaterialCommunityIcons name="plus" size={18} color={Colors.white} />
+            <Text style={styles.addBtnText}>Add product</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.addBtn, styles.secondaryBtn]}
             onPress={() => setShowAddCategoryModal(true)}
-            activeOpacity={0.7}
+            activeOpacity={0.9}
           >
-            <MaterialIcons name="category" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
-            <Text style={[styles.addBtnText, styles.secondaryBtnText]}>Add Category</Text>
+            <MaterialCommunityIcons name="shape" size={18} color={Colors.primary} />
+            <Text style={[styles.addBtnText, styles.secondaryBtnText]}>Add category</Text>
           </TouchableOpacity>
         </View>
 
-        {products.length === 0 ? (
+        {displayedProducts.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialIcons name="inventory" size={64} color={Colors.border} />
-            <Text style={styles.emptyTitle}>No products yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Add your first product to get started
-            </Text>
+            <MaterialCommunityIcons name="package-variant-closed" size={64} color={Colors.border} />
+            <Text style={styles.emptyTitle}>No products match</Text>
+            <Text style={styles.emptySubtitle}>Adjust your search or add a fresh SKU.</Text>
           </View>
         ) : (
-          products.map((prod) => (
+          displayedProducts.map((prod) => (
             <View key={prod.id} style={styles.productRow}>
               <View style={styles.productIconWrapper}>
                 {prod.image_url ? (
@@ -92,32 +139,26 @@ export const ProductsScreen = ({ navigation }) => {
                 ) : (
                   <MaterialCommunityIcons
                     name={getProductIconName(prod)}
-                    size={46}
-                    color="#16A34A"
+                    size={32}
+                    color={Colors.primary}
                   />
                 )}
               </View>
+
               <View style={styles.productInfo}>
                 <Text style={styles.productName}>{prod.name}</Text>
-                <Text style={styles.productDetails}>
-                  ₹{prod.price.toFixed(2)} • Stock: {prod.stock}
-                </Text>
+                <Text style={styles.productDetails}>₹{prod.price.toFixed(2)} • Stock {prod.stock}</Text>
                 <View style={styles.categoryBadge}>
                   <Text style={styles.categoryBadgeText}>{prod.category}</Text>
                 </View>
               </View>
+
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => handleEdit(prod)}
-                >
-                  <MaterialIcons name="edit" size={20} color={Colors.primary} />
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleEdit(prod)}>
+                  <MaterialCommunityIcons name="pencil-outline" size={18} color={Colors.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => handleDelete(prod.id, prod.name)}
-                >
-                  <MaterialIcons name="delete" size={20} color={Colors.error} />
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(prod.id, prod.name)}>
+                  <MaterialCommunityIcons name="delete-outline" size={18} color={Colors.error} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -151,51 +192,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   container: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 96,
   },
-  buttonRow: {
+  toolbarCard: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  addBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 25,
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryBtn: {
-    marginRight: 12,
-  },
-  secondaryBtn: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  addBtnText: {
-    color: Colors.white,
-    fontWeight: 'bold',
-    fontSize: Fonts.sizes.sm,
-  },
-  secondaryBtnText: {
-    color: Colors.primary,
-  },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: Colors.surface,
-    padding: 14,
-    borderRadius: 16,
+    borderRadius: 18,
+    padding: 12,
     marginBottom: 12,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 1 },
@@ -203,14 +210,94 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
-  productIconWrapper: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#ECFDF5',
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: Fonts.sizes.sm,
+    color: Colors.text,
+  },
+  toolbarActions: {
+    flexDirection: 'row',
+  },
+  toolbarBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    backgroundColor: '#F3F4F6',
+    marginLeft: 6,
+  },
+  toolbarBtnActive: {
+    backgroundColor: Colors.primary,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  addBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  primaryBtn: {
+    marginRight: 8,
+  },
+  secondaryBtn: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  addBtnText: {
+    color: Colors.white,
+    fontWeight: '700',
+    fontSize: Fonts.sizes.sm,
+    marginLeft: 6,
+  },
+  secondaryBtnText: {
+    color: Colors.text,
+  },
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 10,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  productIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
     overflow: 'hidden',
   },
   productImage: {
@@ -223,26 +310,26 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: Fonts.sizes.md,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: Colors.text,
     marginBottom: 3,
   },
   productDetails: {
-    fontSize: Fonts.sizes.sm,
+    fontSize: Fonts.sizes.xs,
     color: Colors.textMuted,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   categoryBadge: {
     backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
     alignSelf: 'flex-start',
   },
   categoryBadgeText: {
-    fontSize: Fonts.sizes.xs,
+    fontSize: 11,
     color: Colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -258,7 +345,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: Fonts.sizes.lg,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: Colors.text,
     marginTop: 12,
     marginBottom: 4,

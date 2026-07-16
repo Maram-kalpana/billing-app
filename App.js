@@ -8,24 +8,27 @@ import { CartProvider } from './src/context/CartContext';
 import { BillingProvider } from './src/context/BillingContext';
 import { PaymentProvider } from './src/context/PaymentContext';
 import { ReportProvider } from './src/context/ReportContext';
+import { AuthProvider } from './src/context/AuthContext';
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AccountProvider>
-        <ProductProvider>
-          <CartProvider>
-            <BillingProvider>
-              <PaymentProvider>
-                <ReportProvider>
-                  <AppNavigator />
-                  <StatusBar style="dark" />
-                </ReportProvider>
-              </PaymentProvider>
-            </BillingProvider>
-          </CartProvider>
-        </ProductProvider>
-      </AccountProvider>
+      <AuthProvider>
+        <AccountProvider>
+          <ProductProvider>
+            <CartProvider>
+              <BillingProvider>
+                <PaymentProvider>
+                  <ReportProvider>
+                    <AppNavigator />
+                    <StatusBar style="dark" />
+                  </ReportProvider>
+                </PaymentProvider>
+              </BillingProvider>
+            </CartProvider>
+          </ProductProvider>
+        </AccountProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

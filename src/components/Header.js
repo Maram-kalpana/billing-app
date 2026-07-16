@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useBilling } from '../context/BillingContext';
 import { useCart } from '../context/CartContext';
 
@@ -12,19 +11,21 @@ export const Header = ({ onAddItem, onCartPress }) => {
   const { totalItems } = useCart();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.wrapper}>
       <View style={styles.container}>
         <View style={styles.left}>
-          <Text style={styles.billLabel}>Bill No</Text>
+          <Text style={styles.billLabel}>Bill</Text>
           <Text style={styles.billNumber}>#{billNumber}</Text>
         </View>
-        <View style={styles.right}>
-          <TouchableOpacity style={styles.addItemBtn} onPress={onAddItem} activeOpacity={0.85}>
-            <MaterialCommunityIcons name="plus-circle-outline" size={20} color={Colors.white} />
+
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.addItemBtn} onPress={onAddItem} activeOpacity={0.9}>
+            <MaterialCommunityIcons name="plus-circle-outline" size={18} color={Colors.white} />
             <Text style={styles.addItemText}>Add Item</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cartBtn} onPress={onCartPress} activeOpacity={0.85}>
-            <MaterialCommunityIcons name="cart-outline" size={26} color={Colors.text} />
+
+          <TouchableOpacity style={styles.cartBtn} onPress={onCartPress} activeOpacity={0.9}>
+            <MaterialCommunityIcons name="cart-outline" size={22} color={Colors.text} />
             {totalItems > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{totalItems > 99 ? '99+' : totalItems}</Text>
@@ -33,42 +34,27 @@ export const Header = ({ onAddItem, onCartPress }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  wrapper: {
     backgroundColor: Colors.surface,
   },
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    minHeight: 68,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 58,
     backgroundColor: Colors.surface,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 10,
-    elevation: 4,
-  },
-  left: {
-    flexDirection: 'column',
-  },
-  billLabel: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    marginBottom: 2,
-  },
-  billNumber: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
+    elevation: 3,
   },
   left: {
     flexDirection: 'column',
@@ -77,15 +63,15 @@ const styles = StyleSheet.create({
     fontSize: Fonts.sizes.xs,
     color: Colors.textMuted,
     fontWeight: '600',
-    letterSpacing: 0.4,
-    marginBottom: 4,
+    letterSpacing: 0.3,
+    marginBottom: 2,
   },
   billNumber: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: Colors.text,
   },
-  right: {
+  actions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -94,9 +80,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primary,
-    width: 130,
-    height: 42,
-    borderRadius: 21,
+    height: 44,
+    borderRadius: 22,
     paddingHorizontal: 14,
     marginRight: 10,
   },
@@ -104,25 +89,25 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '700',
     fontSize: Fonts.sizes.sm,
-    marginLeft: 8,
+    marginLeft: 6,
   },
   cartBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 4,
   },
   badge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 3,
+    right: 3,
     backgroundColor: Colors.error,
     borderRadius: 10,
     minWidth: 18,

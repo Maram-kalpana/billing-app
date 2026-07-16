@@ -13,9 +13,11 @@ import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useAccount } from '../context/AccountContext';
+import { useAuth } from '../context/AuthContext';
 
 export const AccountScreen = ({ navigation }) => {
   const { account, updateAccountSettings } = useAccount();
+  const { user, logout } = useAuth();
 
   const [merchantName, setMerchantName] = useState(account.merchantName || '');
   const [upiId, setUpiId] = useState(account.upiId || '');
@@ -53,19 +55,34 @@ export const AccountScreen = ({ navigation }) => {
     Alert.alert('Saved', 'Account settings saved successfully');
   };
 
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Account</Text>
       </View>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Ionicons name="person" size={40} color={Colors.white} />
           </View>
-          <Text style={styles.name}>{account.merchantName || 'Admin Store'}</Text>
-          <Text style={styles.email}>admin@store.com</Text>
+          <Text style={styles.name}>{user?.fullName || account.merchantName || 'Admin Store'}</Text>
+          <Text style={styles.email}>{user?.email || 'admin@store.com'}</Text>
+          <Text style={styles.meta}>{user?.shopName || 'Smart Billing Store'}</Text>
         </View>
 
         {/* Payment Methods Section */}
@@ -155,6 +172,17 @@ export const AccountScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Profile</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+            <View style={styles.menuIconContainer}>
+              <Ionicons name="log-out-outline" size={22} color={Colors.error} />
+            </View>
+            <Text style={styles.menuText}>Logout</Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.border} />
+          </TouchableOpacity>
+        </View>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
@@ -186,6 +214,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   profileHeader: {
     alignItems: 'center',
     padding: 32,
@@ -210,6 +241,12 @@ const styles = StyleSheet.create({
   email: {
     fontSize: Fonts.sizes.sm,
     color: Colors.textMuted,
+  },
+  meta: {
+    fontSize: Fonts.sizes.xs,
+    color: Colors.primary,
+    marginTop: 4,
+    fontWeight: '600',
   },
   section: {
     marginBottom: 16,

@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   FlatList,
   ScrollView,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -24,6 +27,10 @@ import { AddProductModal } from '../components/AddProductModal';
 import { Snackbar } from '../components/Snackbar';
 import { getProductIconName } from '../constants/ProductAssets';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export const ShopScreen = ({ navigation }) => {
   const { products, categories } = useProducts();
   const { addToCart } = useCart();
@@ -34,11 +41,15 @@ export const ShopScreen = ({ navigation }) => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const filteredProducts = useMemo(() => {
-    if (activeCategory === 'All') return products;
-    return products.filter((p) => p.category === activeCategory);
+    const nextProducts = activeCategory === 'All'
+      ? products
+      : products.filter((p) => p.category === activeCategory);
+
+    return nextProducts;
   }, [products, activeCategory]);
 
   useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveCategory('All');
   }, [categories.length]);
 
@@ -67,29 +78,33 @@ export const ShopScreen = ({ navigation }) => {
             style={[styles.categoryChip, activeCategory === 'All' && styles.categoryChipActive]}
             onPress={() => setActiveCategory('All')}
           >
-            <View style={styles.catIconWrapper}>
-              <MaterialCommunityIcons name="storefront-outline" size={18} color={activeCategory === 'All' ? Colors.white : Colors.primary} />
+            <View style={[styles.catIconWrapper, activeCategory === 'All' && styles.catIconWrapperActive]}>
+              <MaterialCommunityIcons name="shopping-outline" size={18} color={activeCategory === 'All' ? Colors.white : Colors.primary} />
             </View>
             <Text style={[styles.catName, activeCategory === 'All' && styles.catNameActive]}>All</Text>
           </TouchableOpacity>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              style={[styles.categoryChip, activeCategory === cat.name && styles.categoryChipActive]}
-              onPress={() => setActiveCategory(cat.name)}
-            >
-              <View style={[styles.catIconWrapper, activeCategory === cat.name && styles.catIconWrapperActive]}>
-                <MaterialCommunityIcons
-                  name={cat.icon || 'package-variant'}
-                  size={18}
-                  color={activeCategory === cat.name ? Colors.white : Colors.textMuted}
-                />
-              </View>
-              <Text style={[styles.catName, activeCategory === cat.name && styles.catNameActive]}>
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+
+          {categories.map((cat) => {
+            const isActive = activeCategory === cat.name;
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                onPress={() => setActiveCategory(cat.name)}
+              >
+                <View style={[styles.catIconWrapper, isActive && styles.catIconWrapperActive]}>
+                  <MaterialCommunityIcons
+                    name={cat.icon || 'package-variant'}
+                    size={18}
+                    color={isActive ? Colors.white : Colors.textMuted}
+                  />
+                </View>
+                <Text style={[styles.catName, isActive && styles.catNameActive]}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -105,7 +120,7 @@ export const ShopScreen = ({ navigation }) => {
           <View style={styles.emptyState}>
             <MaterialCommunityIcons name="package-variant" size={64} color={Colors.border} />
             <Text style={styles.emptyTitle}>No products</Text>
-            <Text style={styles.emptySubtitle}>Tap Add Item to create your first grocery SKU.</Text>
+            <Text style={styles.emptySubtitle}>Tap Add Item to create your first premium SKU.</Text>
           </View>
         )}
       />
@@ -120,18 +135,59 @@ export const ShopScreen = ({ navigation }) => {
   );
 };
 
+const ProductImage = ({ product }) => {
+  const [loaded, setLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const imageUri = product.image_url || `https://source.unsplash.com/300x300/?${encodeURIComponent(product.name)}`;
+
+  return (
+    <View style={styles.productIconWrapper}>
+      {!hasError ? (
+        <>
+          {!loaded && (
+            <View style={styles.imageSkeleton}>
+              <MaterialCommunityIcons name={getProductIconName(product)} size={28} color={Colors.primary} />
+            </View>
+          )}
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.productImage}
+            onLoad={() => setLoaded(true)}
+            onError={() => {
+              setLoaded(true);
+              setHasError(true);
+            }}
+          />
+        </>
+      ) : (
+        <MaterialCommunityIcons name={getProductIconName(product)} size={34} color={Colors.primary} />
+      )}
+    </View>
+  );
+};
+
 const ProductCard = ({ product, onPress }) => {
   const scale = useSharedValue(1);
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(8);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 220 });
+    translateY.value = withTiming(0, { duration: 220 });
+  }, [opacity, translateY]);
+
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withTiming(scale.value, { duration: 120 }) }],
-    opacity: withTiming(scale.value === 1 ? 1 : 0.98, { duration: 120 }),
+    transform: [
+      { scale: withTiming(scale.value, { duration: 120 }) },
+      { translateY: withTiming(translateY.value, { duration: 220 }) },
+    ],
+    opacity: withTiming(opacity.value, { duration: 220 }),
   }));
 
   return (
     <Animated.View style={[styles.productCard, animatedStyle]}>
       <TouchableOpacity
-        activeOpacity={0.85}
-        android_ripple={{ color: 'rgba(0,0,0,0.08)', borderless: false }}
+        activeOpacity={0.9}
         onPress={() => onPress(product)}
         onPressIn={() => {
           scale.value = 0.97;
@@ -141,17 +197,7 @@ const ProductCard = ({ product, onPress }) => {
         }}
         style={styles.productTouchable}
       >
-        <View style={styles.productIconWrapper}>
-          {product.image_url ? (
-            <Image source={{ uri: product.image_url }} style={styles.productImage} />
-          ) : (
-            <MaterialCommunityIcons
-              name={getProductIconName(product)}
-              size={42}
-              color="#16A34A"
-            />
-          )}
-        </View>
+        <ProductImage product={product} />
         <View style={styles.productDetailsContainer}>
           <Text style={styles.productName} numberOfLines={2} ellipsizeMode="tail">
             {product.name}
@@ -161,7 +207,7 @@ const ProductCard = ({ product, onPress }) => {
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>₹{product.price.toFixed(2)}</Text>
           <View style={styles.addButton}>
-            <MaterialCommunityIcons name="plus" size={20} color={Colors.white} />
+            <MaterialCommunityIcons name="plus" size={18} color={Colors.white} />
           </View>
         </View>
       </TouchableOpacity>
@@ -186,27 +232,28 @@ const styles = StyleSheet.create({
   categoryChip: {
     alignItems: 'center',
     backgroundColor: Colors.white,
-    width: 74,
-    height: 86,
-    borderRadius: 18,
+    minWidth: 82,
+    height: 44,
+    borderRadius: 22,
     marginRight: 10,
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: Colors.border,
+    flexDirection: 'row',
   },
   categoryChipActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   catIconWrapper: {
-    backgroundColor: Colors.surface,
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    backgroundColor: Colors.primaryLight,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginRight: 8,
   },
   catIconWrapperActive: {
     backgroundColor: 'rgba(255,255,255,0.18)',
@@ -220,51 +267,47 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '700',
   },
-  productsGrid: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
   listContent: {
     paddingHorizontal: 12,
-    paddingBottom: 24,
+    paddingBottom: 88,
   },
   columnWrapper: {
     justifyContent: 'space-between',
     marginBottom: 12,
   },
   productCard: {
-    flexBasis: '30%',
-    maxWidth: 132,
-    height: 172,
-    borderRadius: 18,
+    flexBasis: '31%',
+    maxWidth: 118,
+    height: 164,
+    borderRadius: 16,
     backgroundColor: Colors.white,
-    marginBottom: 0,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
-    padding: 12,
+    padding: 10,
     justifyContent: 'space-between',
   },
   productTouchable: {
     flex: 1,
   },
   productIconWrapper: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#E8F6EF',
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
     overflow: 'hidden',
+  },
+  imageSkeleton: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E8F6EF',
   },
   productImage: {
     width: '100%',
@@ -278,40 +321,37 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.text,
-    marginBottom: 4,
+    marginBottom: 2,
     lineHeight: 17,
   },
   productStock: {
     fontSize: 11,
     color: Colors.textMuted,
-    marginBottom: 10,
   },
   productFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
   },
   productPrice: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.success,
+    color: Colors.primary,
   },
   addButton: {
-    backgroundColor: Colors.success,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.success,
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 6,
+    elevation: 3,
   },
   emptyState: {
     alignItems: 'center',
