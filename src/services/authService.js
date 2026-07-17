@@ -1,34 +1,27 @@
-export const login = async ({ email, password }) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+import API from './api';
 
-  return {
-    user: {
-      id: 'demo-user',
-      fullName: 'Demo Merchant',
-      shopName: 'Green Checkout',
-      mobile: '+91 9876543210',
-      email,
-    },
-    token: 'user_logged_in',
-  };
+export const registerUser = (user) => {
+  return API.post('/auth/register', {
+    full_name: user.fullName,
+    shop_name: user.shopName,
+    shop_type: user.shopType,
+    email: user.email,
+    mobile: user.mobile,
+    password: user.password,
+  });
 };
 
-export const register = async (payload) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  return {
-    user: {
-      id: 'demo-user',
-      fullName: payload.fullName,
-      shopName: payload.shopName,
-      mobile: payload.mobile,
-      email: payload.email,
-    },
-    token: 'user_logged_in',
-  };
+export const loginUser = (user) => {
+  return API.post('/auth/login', {
+    email: user.email,
+    password: user.password,
+  });
 };
 
-export const logout = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  return true;
+export const getProfile = (token) => {
+  return API.get('/auth/profile', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 };

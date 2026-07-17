@@ -1,89 +1,184 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login as authLogin, logout as authLogout, register as authRegister } from '../services/authService';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
-const AuthContext = createContext(null);
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import {
+  loginUser,
+  registerUser,
+  getProfile,
+} from '../services/authService';
+
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+
   const [user, setUser] = useState(null);
+
   const [token, setToken] = useState(null);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const bootstrap = async () => {
-      try {
-        const storedToken = await AsyncStorage.getItem('@auth_token');
-        const storedUser = await AsyncStorage.getItem('@auth_user');
 
-        if (storedToken) {
-          setToken(storedToken);
-        }
+    loadUser();
 
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (error) {
-        console.warn('Auth bootstrap failed', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    bootstrap();
   }, []);
 
-  const login = async (credentials) => {
-    const response = await authLogin(credentials);
-    const nextUser = response.user;
-    const nextToken = response.token || 'user_logged_in';
+  const loadUser = async () => {
 
-    setUser(nextUser);
-    setToken(nextToken);
-    await AsyncStorage.setItem('@auth_token', nextToken);
-    await AsyncStorage.setItem('@auth_user', JSON.stringify(nextUser));
+    try {
 
-    return response;
+      const savedToken = await AsyncStorage.getItem('@auth_token');
+
+      if (!savedToken) {
+
+        setLoading(false);
+
+        return;
+
+      }
+
+      setToken(savedToken);
+
+      const response = await getProfile(savedToken);
+
+      if (response.success) {
+
+        setUser(response.user);
+
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+      await AsyncStorage.removeItem('@auth_token');
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
   };
 
-  const register = async (payload) => {
-    const response = await authRegister(payload);
-    const nextUser = response.user;
-    const nextToken = response.token || 'user_logged_in';
+  // LOGIN
 
-    setUser(nextUser);
-    setToken(nextToken);
-    await AsyncStorage.setItem('@auth_token', nextToken);
-    await AsyncStorage.setItem('@auth_user', JSON.stringify(nextUser));
+  const login = async (data) => {
 
-    return response;
+    const response = await loginUser(data);
+
+    if (response.data.success) {
+
+      const jwt = response.data.token;
+
+      setToken(jwt);
+
+      setUser(response.data.user);
+
+      await AsyncStorage.setItem('@auth_token', jwt);
+
+    }
+
+    return response.data;
+
   };
+
+  // REGISTER
+
+  const register = async (data) => {
+
+  try {
+
+    console.log("Sending Registration Data:", data);
+
+    const response = await registerUser(data);
+
+    console.log("Backend Response:", response.data);
+
+    if (response.data.success) {
+
+      const jwt = response.data.token;
+
+      await AsyncStorage.setItem('@auth_token', jwt);
+
+      setToken(jwt);
+
+      const profile = await getProfile(jwt);
+
+      console.log("Profile Response:", profile.data);
+
+      if (profile.data.success) {
+
+        setUser(profile.data.user);
+
+      }
+
+    }
+
+    return response.data;
+
+  } catch (error) {
+
+    console.log("Registration Error:", error.message);
+
+    console.log("Server Response:", error.response?.data);
+
+    throw error;
+
+  }
+
+};
+  // LOGOUT
 
   const logout = async () => {
-    setUser(null);
-    setToken(null);
+
     await AsyncStorage.removeItem('@auth_token');
-    await AsyncStorage.removeItem('@auth_user');
+
+    setUser(null);
+
+    setToken(null);
+
   };
 
-  const isLoggedIn = () => Boolean(token);
-
   const value = useMemo(() => ({
+
     user,
+
     token,
+
     loading,
+
     login,
-    logout,
+
     register,
-    isLoggedIn,
+
+    logout,
+
+    isLoggedIn: !!token,
+
   }), [user, token, loading]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+
+    <AuthContext.Provider value={value}>
+
+      {children}
+
+    </AuthContext.Provider>
+
+  );
+
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+
+  return useContext(AuthContext);
+
 };

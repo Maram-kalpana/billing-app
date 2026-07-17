@@ -23,6 +23,7 @@ export const RegisterScreen = ({ navigation }) => {
   const { register } = useAuth();
   const [fullName, setFullName] = useState('');
   const [shopName, setShopName] = useState('');
+ const [shopType, setShopType] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +37,7 @@ export const RegisterScreen = ({ navigation }) => {
     const validationErrors = validateAuthFields({
       fullName,
       shopName,
+      shopType,
       mobile,
       email,
       password,
@@ -47,7 +49,7 @@ export const RegisterScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      await register({ fullName, shopName, mobile, email, password });
+      await register({ fullName, shopName, shopType, mobile, email, password });
       navigation.replace('Splash');
     } catch (error) {
       Alert.alert('Registration Failed', 'Please try again in a moment.');
@@ -87,6 +89,19 @@ export const RegisterScreen = ({ navigation }) => {
               error={errors.shopName}
             />
 
+            <CustomInput
+  label="Business Type"
+  value={shopType}
+  onChangeText={(value) => {
+    setShopType(value);
+    if (errors.shopType) {
+      setErrors((prev) => ({ ...prev, shopType: undefined }));
+    }
+  }}
+  placeholder="Enter your business type (e.g. Grocery Store, Boutique)"
+  iconName="briefcase-outline"
+  error={errors.shopType}
+/>
             <CustomInput
               label="Mobile Number"
               value={mobile}

@@ -1,6 +1,6 @@
 export const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
-export const validateAuthFields = ({ fullName, shopName, mobile, email, password, confirmPassword }) => {
+export const validateAuthFields = ({ fullName, shopName,shopType, mobile, email, password, confirmPassword }) => {
   const errors = {};
 
   if (fullName !== undefined && !fullName.trim()) {
@@ -10,7 +10,9 @@ export const validateAuthFields = ({ fullName, shopName, mobile, email, password
   if (shopName !== undefined && !shopName.trim()) {
     errors.shopName = 'Shop name is required';
   }
-
+if (shopType !== undefined && !shopType.trim()) {
+  errors.shopType = 'Shop Type is required';
+}
   if (mobile !== undefined && !mobile.trim()) {
     errors.mobile = 'Mobile number is required';
   }
