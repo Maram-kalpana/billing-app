@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,19 +13,46 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useProducts } from '../context/ProductContext';
 import { Header } from '../components/Header';
 import { AddProductModal } from '../components/AddProductModal';
 import { AddCategoryModal } from '../components/AddCategoryModal';
 import { getProductIconName } from '../constants/ProductAssets';
+import { useAuth } from '../context/AuthContext';
+import {
+  getProducts,
+  deleteProduct,
+} from '../services/productService';
+import { createCategory } from "../services/categoryService";
 
 export const ProductsScreen = ({ navigation }) => {
-  const { products, deleteProduct, addCategory } = useProducts();
+const { token } = useAuth();
+
+const [products, setProducts] = useState([]);
+const [loading, setLoading] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
+  useEffect(() => {
+  loadProducts();
+}, []);
+
+const loadProducts = async () => {
+  try {
+    setLoading(true);
+
+    const response = await getProducts(token);
+
+    if (response.data.success) {
+      setProducts(response.data.data);
+    }
+  } catch (error) {
+    console.log(error.response?.data || error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const displayedProducts = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -55,7 +82,17 @@ export const ProductsScreen = ({ navigation }) => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => deleteProduct(productId),
+          onPress: async () => {
+  try {
+    await deleteProduct(productId, token);
+    loadProducts();
+  } catch (error) {
+    Alert.alert(
+      "Error",
+      error.response?.data?.message || "Unable to delete product"
+    );
+  }
+},
         },
       ]
     );
@@ -167,18 +204,34 @@ export const ProductsScreen = ({ navigation }) => {
       </ScrollView>
 
       <AddProductModal
-        visible={addModalVisible}
-        onClose={() => {
-          setAddModalVisible(false);
-          setEditingProduct(null);
-        }}
-        productToEdit={editingProduct}
-      />
+  visible={addModalVisible}
+  productToEdit={editingProduct}
+  onSuccess={() => {
+    loadProducts();
+    setAddModalVisible(false);
+    setEditingProduct(null);
+  }}
+  onClose={() => {
+    setAddModalVisible(false);
+    setEditingProduct(null);
+  }}
+/>
       <AddCategoryModal
         visible={showAddCategoryModal}
         onClose={() => setShowAddCategoryModal(false)}
         onSave={async (categoryName) => {
-          await addCategory(categoryName);
+          await createCategory(
+  {
+    name: categoryName,
+    image: "",
+    status: "Active",
+  },
+  token
+);
+
+Alert.alert("Success", "Category Added");
+
+setShowAddCategoryModal(false);
           setShowAddCategoryModal(false);
         }}
       />

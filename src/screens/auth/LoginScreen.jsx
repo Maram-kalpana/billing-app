@@ -39,18 +39,53 @@ export const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      await login({ email, password });
-      navigation.replace('Splash');
-    } catch (error) {
-      Alert.alert('Login Failed', 'Please check your credentials and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
+  if (!validate()) return;
+
+  setLoading(true);
+
+  try {
+
+    const response = await login({
+      email,
+      password,
+    });
+
+    if (response.success) {
+
+      Alert.alert(
+        "Success",
+        "Login Successful"
+      );
+
+      navigation.replace("Splash");
+
+    } else {
+
+      Alert.alert(
+        "Login Failed",
+        response.message
+      );
+
+    }
+
+  } catch (error) {
+
+    console.log("Login Error:", error.response?.data);
+
+    Alert.alert(
+      "Login Failed",
+      error.response?.data?.message ||
+      "Something went wrong. Please try again."
+    );
+
+  } finally {
+
+    setLoading(false);
+
+  }
+
+};
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

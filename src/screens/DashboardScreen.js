@@ -3,11 +3,48 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '../components/Header';
 import { StatCard } from '../components/StatCard';
-import { summaryData } from '../data/dashboardData';
+import React, { useEffect, useState } from 'react';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Fonts';
+import { useAuth } from '../context/AuthContext';
+import { getDashboard } from '../services/dashboardService';
+
 
 export const DashboardScreen = () => {
+
+  const { token } = useAuth();
+
+  const [summary, setSummary] = useState({
+    totalBills: 0,
+    totalSales: 0,
+    totalProducts: 0,
+    totalCategories: 0,
+    lowStockProducts: 0,
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const loadDashboard = async () => {
+    try {
+
+      const response = await getDashboard(token);
+
+      if (response.data.success) {
+        setSummary(response.data.data);
+      }
+
+    } catch (err) {
+      console.log("Dashboard Error:", err.response?.data || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+ 
+  
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header title="Dashboard" />
@@ -23,30 +60,40 @@ export const DashboardScreen = () => {
         </View>
 
         <Text style={styles.sectionTitle}>Summary Statistics</Text>
-        <StatCard 
-          title="Total Revenue"
-          value={`$${summaryData.totalRevenue.toFixed(2)}`}
-          icon="cash"
-          color={Colors.success}
-        />
-        <StatCard 
-          title="Pending Invoices"
-          value={`$${summaryData.pendingInvoices.toFixed(2)}`}
-          icon="time"
-          color={Colors.warning}
-        />
-        <StatCard 
-          title="Total Expenses"
-          value={`$${summaryData.expenses.toFixed(2)}`}
-          icon="trending-down"
-          color={Colors.error}
-        />
-        <StatCard 
-          title="Active Customers"
-          value={summaryData.activeCustomers.toString()}
-          icon="people"
-          color={Colors.primary}
-        />
+        <StatCard
+  title="Total Sales"
+  value={`₹${summary.totalSales}`}
+  icon="cash"
+  color={Colors.success}
+/>
+
+<StatCard
+  title="Total Bills"
+  value={summary.totalBills.toString()}
+  icon="receipt"
+  color={Colors.warning}
+/>
+
+<StatCard
+  title="Products"
+  value={summary.totalProducts.toString()}
+  icon="cube"
+  color={Colors.primary}
+/>
+
+<StatCard
+  title="Categories"
+  value={summary.totalCategories.toString()}
+  icon="grid"
+  color={Colors.info}
+/>
+
+<StatCard
+  title="Low Stock Products"
+  value={summary.lowStockProducts.toString()}
+  icon="alert-circle"
+  color={Colors.error}
+/>
         
         <View style={{ height: 40 }} />
       </ScrollView>

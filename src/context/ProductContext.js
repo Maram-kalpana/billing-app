@@ -1,122 +1,148 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { productsData as seedProducts, categories as seedCategories } from '../data/posData';
-import { getCategoryIconName } from '../constants/ProductAssets';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
+
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "../services/productService";
+
+import {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from "../services/categoryService";
 
 const ProductContext = createContext();
 
-const PRODUCTS_KEY = '@products';
-const CATEGORIES_KEY = '@categories';
-
 export const ProductProvider = ({ children }) => {
+  const { token } = useAuth();
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (token) {
+      loadData();
+    }
+  }, [token]);
 
   const loadData = async () => {
     try {
-      const [storedProducts, storedCategories] = await Promise.all([
-        AsyncStorage.getItem(PRODUCTS_KEY),
-        AsyncStorage.getItem(CATEGORIES_KEY),
+      setLoading(true);
+
+      const [productsRes, categoriesRes] = await Promise.all([
+        getProducts(token),
+        getCategories(token),
       ]);
 
-      if (storedProducts) {
-        setProducts(JSON.parse(storedProducts));
-      } else {
-        setProducts(seedProducts);
-        await AsyncStorage.setItem(PRODUCTS_KEY, JSON.stringify(seedProducts));
+      if (productsRes.data.success) {
+        setProducts(productsRes.data.data);
       }
 
-      if (storedCategories) {
-        setCategories(JSON.parse(storedCategories));
-      } else {
-        setCategories(seedCategories);
-        await AsyncStorage.setItem(CATEGORIES_KEY, JSON.stringify(seedCategories));
+      if (categoriesRes.data.success) {
+        setCategories(categoriesRes.data.data);
       }
-    } catch (error) {
-      console.error('Error loading products:', error);
-      setProducts(seedProducts);
-      setCategories(seedCategories);
+    } catch (err) {
+      console.log(err.response?.data || err.message);
     } finally {
-      setIsLoaded(true);
+      setLoading(false);
     }
   };
 
-  const saveProducts = async (updatedProducts) => {
-    try {
-      await AsyncStorage.setItem(PRODUCTS_KEY, JSON.stringify(updatedProducts));
-    } catch (error) {
-      console.error('Error saving products:', error);
-    }
-  };
-
-  const saveCategories = async (updatedCategories) => {
-    try {
-      await AsyncStorage.setItem(CATEGORIES_KEY, JSON.stringify(updatedCategories));
-    } catch (error) {
-      console.error('Error saving categories:', error);
-    }
-  };
+  // ------------------------
+  // PRODUCTS
+  // ------------------------
 
   const addProduct = async (product) => {
-    const newProduct = {
-      ...product,
-      id: `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    };
-    const updatedProducts = [...products, newProduct];
-    setProducts(updatedProducts);
-    await saveProducts(updatedProducts);
-    return newProduct;
+    const res = await createProduct(product, token);
+
+    if (res.data.success) {
+      await loadData();
+    }
+
+    return res.data;
   };
 
-  const addCategory = async (categoryName) => {
-    const trimmed = categoryName.trim();
-    if (!trimmed) return null;
+  const editProduct = async (id, product) => {
+    const res = await updateProduct(id, product, token);
 
-    const normalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-    const exists = categories.some((cat) => cat.name.toLowerCase() === normalized.toLowerCase());
-    if (exists) return exists;
+    if (res.data.success) {
+      await loadData();
+    }
 
-    const newCategory = {
-      id: `c_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: normalized,
-      icon: getCategoryIconName(normalized),
-    };
-
-    const updatedCategories = [...categories, newCategory];
-    setCategories(updatedCategories);
-    await saveCategories(updatedCategories);
-    return newCategory;
+    return res.data;
   };
 
-  const updateProduct = async (productId, updates) => {
-    const updatedProducts = products.map((p) =>
-      p.id === productId ? { ...p, ...updates } : p
+  const removeProduct = async (id) => {
+    const res = await deleteProduct(id, token);
+
+    if (res.data.success) {
+      await loadData();
+    }
+
+    return res.data;
+  };
+
+  // ------------------------
+  // CATEGORIES
+  // ------------------------
+
+  const addCategory = async (name) => {
+    const res = await createCategory(
+      {
+        name,
+        image: "",
+        status: "Active",
+      },
+      token
     );
-    setProducts(updatedProducts);
-    await saveProducts(updatedProducts);
+
+    if (res.data.success) {
+      await loadData();
+    }
+
+    return res.data;
   };
 
-  const deleteProduct = async (productId) => {
-    const updatedProducts = products.filter((p) => p.id !== productId);
-    setProducts(updatedProducts);
-    await saveProducts(updatedProducts);
+  const editCategory = async (id, category) => {
+    const res = await updateCategory(id, category, token);
+
+    if (res.data.success) {
+      await loadData();
+    }
+
+    return res.data;
+  };
+
+  const removeCategory = async (id) => {
+    const res = await deleteCategory(id, token);
+
+    if (res.data.success) {
+      await loadData();
+    }
+
+    return res.data;
   };
 
   return (
     <ProductContext.Provider
       value={{
+        loading,
         products,
         categories,
-        isLoaded,
+        loadData,
+
         addProduct,
+        editProduct,
+        removeProduct,
+
         addCategory,
-        updateProduct,
-        deleteProduct,
+        editCategory,
+        removeCategory,
       }}
     >
       {children}
@@ -126,8 +152,10 @@ export const ProductProvider = ({ children }) => {
 
 export const useProducts = () => {
   const context = useContext(ProductContext);
+
   if (!context) {
-    throw new Error('useProducts must be used within a ProductProvider');
+    throw new Error("useProducts must be used within ProductProvider");
   }
+
   return context;
 };

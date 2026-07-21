@@ -19,14 +19,24 @@ import { useProducts } from '../context/ProductContext';
 import { getCategoryIconName } from '../constants/ProductAssets';
 import { assignProductImage, uploadProductImage } from '../services/ImageUploadService';
 import { AddCategoryModal } from './AddCategoryModal';
+import { useAuth } from "../context/AuthContext";
+
+import {
+  createProduct,
+  updateProduct as updateProductAPI,
+} from "../services/productService";
 
 export const AddProductModal = ({ visible, onClose, productToEdit }) => {
-  const { categories, addProduct, addCategory, updateProduct } = useProducts();
+  const { categories, addCategory } = useProducts();
+
+const { token } = useAuth();
+
+
 
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
   const [localImageUri, setLocalImageUri] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -39,7 +49,8 @@ export const AddProductModal = ({ visible, onClose, productToEdit }) => {
       setName(productToEdit.name || '');
       setPrice(String(productToEdit.price || ''));
       setStock(String(productToEdit.stock || ''));
-      setSelectedCategory(productToEdit.category || '');
+      const cat = categories.find(c => c.id === productToEdit.category_id);
+setSelectedCategory(cat || null);
       setImageUrl(productToEdit.image_url || '');
       setLocalImageUri('');
     } else {
@@ -111,12 +122,39 @@ export const AddProductModal = ({ visible, onClose, productToEdit }) => {
       image_url: finalImageUrl || null,
       icon: getCategoryIconName(selectedCategory),
     };
+try {
 
     if (productToEdit) {
-      await updateProduct(productToEdit.id, payload);
+
+        await updateProductAPI(productToEdit.id, {
+            category_id: selectedCategory.id,
+            product_name: name,
+            price,
+            stock,
+            image: finalImageUrl,
+        }, token);
+
     } else {
-      await addProduct(payload);
+
+        await createProduct({
+            category_id: selectedCategory.id,
+            product_name: name,
+            price,
+            stock,
+            image: finalImageUrl,
+        }, token);
+
     }
+
+    resetForm();
+
+    onClose();
+
+} catch (err) {
+
+    console.log(err.response?.data || err.message);
+
+}
 
     resetForm();
     onClose();
@@ -154,18 +192,15 @@ export const AddProductModal = ({ visible, onClose, productToEdit }) => {
   const handleAddCategory = async (categoryName) => {
     const result = await addCategory(categoryName);
     if (result) {
-      setSelectedCategory(result.name);
+      setSelectedCategory(result.data);
       setShowCategoryPicker(false);
       setShowAddCategoryModal(false);
     }
   };
 
   const getCategoryName = () => {
-    if (!selectedCategory) return '';
-    const cat = categories.find((c) => c.name === selectedCategory);
-    return cat ? cat.name : selectedCategory;
-  };
-
+    return selectedCategory?.name || "";
+};
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
       <KeyboardAvoidingView
@@ -232,7 +267,7 @@ export const AddProductModal = ({ visible, onClose, productToEdit }) => {
                 onPress={() => setShowCategoryPicker(!showCategoryPicker)}
               >
                 <Text style={selectedCategory ? styles.dropdownText : styles.dropdownPlaceholder}>
-                  {selectedCategory ? getCategoryName() : 'Select category'}
+                  {selectedCategory?.name || "Select category"}
                 </Text>
                 <MaterialCommunityIcons
                   name={showCategoryPicker ? 'chevron-up' : 'chevron-down'}
@@ -248,15 +283,15 @@ export const AddProductModal = ({ visible, onClose, productToEdit }) => {
                       key={cat.id}
                       style={[
                         styles.categoryOption,
-                        selectedCategory === cat.name && styles.categoryOptionActive,
+                        selectedCategory?.id === cat.id && styles.categoryOptionActive,
                       ]}
                       onPress={() => {
-                        setSelectedCategory(cat.name);
+                        setSelectedCategory(cat);
                         setShowCategoryPicker(false);
                       }}
                     >
                       <Text style={styles.categoryOptionText}>{cat.name}</Text>
-                      {selectedCategory === cat.name ? (
+                      {selectedCategory?.id === cat.id ? (
                         <MaterialCommunityIcons name="check" size={18} color={Colors.primary} />
                       ) : null}
                     </TouchableOpacity>

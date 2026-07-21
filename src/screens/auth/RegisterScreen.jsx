@@ -49,11 +49,43 @@ export const RegisterScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      await register({ fullName, shopName, shopType, mobile, email, password });
-      navigation.replace('Splash');
-    } catch (error) {
-      Alert.alert('Registration Failed', 'Please try again in a moment.');
-    } finally {
+     const response = await register({
+  fullName,
+  shopName,
+  shopType,
+  mobile,
+  email,
+  password,
+});
+
+if (response.success) {
+
+  Alert.alert(
+    "Success",
+    "Registration Successful. Please login.",
+    [
+      {
+        text: "OK",
+        onPress: () => navigation.replace("Login"),
+      },
+    ]
+  );
+
+} else {
+
+  Alert.alert("Registration Failed", response.message);
+
+}
+   } catch (error) {
+
+  console.log(error);
+
+  Alert.alert(
+    "Registration Failed",
+    error.response?.data?.message || error.message
+  );
+
+} finally {
       setLoading(false);
     }
   };
@@ -90,7 +122,7 @@ export const RegisterScreen = ({ navigation }) => {
             />
 
             <CustomInput
-  label="Business Type"
+  label="Shop Type"
   value={shopType}
   onChangeText={(value) => {
     setShopType(value);
@@ -98,7 +130,7 @@ export const RegisterScreen = ({ navigation }) => {
       setErrors((prev) => ({ ...prev, shopType: undefined }));
     }
   }}
-  placeholder="Enter your business type (e.g. Grocery Store, Boutique)"
+  placeholder="Enter your shop type (e.g. Grocery Store, Boutique)"
   iconName="briefcase-outline"
   error={errors.shopType}
 />

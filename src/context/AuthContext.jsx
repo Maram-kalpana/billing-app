@@ -72,53 +72,23 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (data) => {
 
+  try {
+
+    console.log("Sending Login Data:", data);
+
     const response = await loginUser(data);
+
+    console.log("Login Response:", response.data);
 
     if (response.data.success) {
 
       const jwt = response.data.token;
+
+      await AsyncStorage.setItem("@auth_token", jwt);
 
       setToken(jwt);
 
       setUser(response.data.user);
-
-      await AsyncStorage.setItem('@auth_token', jwt);
-
-    }
-
-    return response.data;
-
-  };
-
-  // REGISTER
-
-  const register = async (data) => {
-
-  try {
-
-    console.log("Sending Registration Data:", data);
-
-    const response = await registerUser(data);
-
-    console.log("Backend Response:", response.data);
-
-    if (response.data.success) {
-
-      const jwt = response.data.token;
-
-      await AsyncStorage.setItem('@auth_token', jwt);
-
-      setToken(jwt);
-
-      const profile = await getProfile(jwt);
-
-      console.log("Profile Response:", profile.data);
-
-      if (profile.data.success) {
-
-        setUser(profile.data.user);
-
-      }
 
     }
 
@@ -126,9 +96,29 @@ export const AuthProvider = ({ children }) => {
 
   } catch (error) {
 
-    console.log("Registration Error:", error.message);
+    console.log("Login Error:", error.response?.data);
 
-    console.log("Server Response:", error.response?.data);
+    throw error;
+
+  }
+
+};
+
+  // REGISTER
+
+  const register = async (data) => {
+
+  try {
+
+    const response = await registerUser(data);
+
+    console.log("Register Response:", response.data);
+
+    return response.data;
+
+  } catch (error) {
+
+    console.log("Register Error:", error.response?.data);
 
     throw error;
 
